@@ -91,7 +91,8 @@ class BitBoard:
         見方: たとえば (moves >> i) & 1 == 1 なら、ビット i（マス i）は合法手。
         """
         player, opponent = self._get_player_bitboards()
-        empty = ~(player | opponent) & 0xFFFFFFFFFFFFFFFF  # 盤外ビットを消す
+        #石があるところは1を返す変数
+        empty = ~(player | opponent) & 0xFFFFFFFFFFFFFFFF  # 盤外ビットを消す(0~63は1、64以降は0)
 
         legal_moves = 0
         # 8方向それぞれについて、一度に“はさみ”を検出する
@@ -100,10 +101,11 @@ class BitBoard:
         # 3) その先にプレイヤーの石があれば、その隣接空きマスを“合法手”に加える
 
         # --- 東 (East) 方向 ---
+        #H列除く相手の石が置いてある場所を表している
         mask = opponent & ~self.MASK_FILE_H  # H列へはみ出すもの除去
         flip_candidates = mask & (player << 1)
         # 周辺の相手石をすべて取り込みつつ、
-        while flip_candidates:
+        while flip_candidates:  #Pythonは0以外の整数はTrue、0になるとループ終了
             legal_moves |= (legal_moves | (empty & (flip_candidates << 1)))
             flip_candidates = mask & (flip_candidates << 1)
 
@@ -165,6 +167,7 @@ class BitBoard:
     # ------------------------------------------------------------
     def make_move(self, move: int) -> bool:
         # move がインデックスの場合はビットに変換
+        #movw_bbは置く場所だけ1の変数(二進数)
         if move.bit_length() <= 6:
             idx = move
             move_bb = 1 << idx
@@ -184,7 +187,7 @@ class BitBoard:
         flips = 0
         cand = mask & (move_bb << 1)
         while cand:
-            flips |= cand
+            flips |= cand  #flips = flips | cand
             tcand = mask & (cand << 1)
             if tcand == 0:
                 break
@@ -290,7 +293,7 @@ class BitBoard:
 
         # 実際にビットを反転・追加
         if self.current_player == 'B':
-            self.black ^= (move_bb | total_flips)
+            self.black ^= (move_bb | total_flips)  #^= = XOR
             self.white ^= total_flips
             self.black |= move_bb
         else:
@@ -299,7 +302,7 @@ class BitBoard:
             self.white |= move_bb
 
         # 手番交代
-        self.current_player = 'W' if self.current_player == 'B' else 'B'
+        self.current_player = 'W' if self.current_player == 'B' else 'B'  #self.current_playerが'B'ならば、'W'を代入。それ以外であれば、'B'を代入。
         return True
 
     # ------------------------------------------------------------
@@ -315,18 +318,18 @@ class BitBoard:
         if self.get_legal_moves() != 0:
             return False
         # 一度手番を入れ替えて相手の合法手を確認
-        print(self.get_legal_moves())
+
         self.current_player = 'W' if self.current_player == 'B' else 'B'
         has_moves = (self.get_legal_moves() != 0)
         # 手番を戻す
         self.current_player = 'W' if self.current_player == 'B' else 'B'
-        return not has_moves
+        return not has_moves  #置ける場所がないとTrueが返ってくる
 
     # ------------------------------------------------------------
     # 現在スコア（黒, 白 の石数）を返す
     # ------------------------------------------------------------
     def get_score(self) -> Tuple[int, int]:
-        b_count = bin(self.black).count("1")
+        b_count = bin(self.black).count("1")  #bin = 二進数を文字列に変換する関数, 二進数を文字列に変換して、1の数をカウント
         w_count = bin(self.white).count("1")
         return b_count, w_count
 
@@ -338,7 +341,7 @@ class BitBoard:
         moves = []
         for i in range(64):
             if (legal_bb >> i) & 1:
-                moves.append(self.index_to_square(i))
+                moves.append(self.index_to_square(i))  # append = 配列の最後に要素を追加
         return moves
 
 def main():
@@ -377,7 +380,7 @@ def main():
             print("合法手なし → pass")
 
         # プレイヤー入力
-        user_input = input("着手 (例 D3 or pass): ").strip().upper()
+        user_input = input("着手 (例 D3 or pass): ").strip().upper()  #input = C言語でいうscanf、strip = 入力文字列の前後のスペースを除く関数、upper = アルファベット大文字
 
         # pass の場合
         if user_input == "PASS":
